@@ -1,3 +1,5 @@
+import os
+
 import openai
 import time
 import logging
@@ -13,7 +15,7 @@ class GPT4(LLM):
         self.temperature = temperature
         self.rstrip = rstrip
         self.engine = engine
-        self.client = openai.OpenAI(api_key='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')
+        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def complete(self, prompt):
 

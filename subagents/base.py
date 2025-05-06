@@ -1,4 +1,5 @@
 import abc
+import asyncio
 import importlib
 import inspect
 import pkgutil
@@ -19,12 +20,17 @@ class AbstractSubAgent(ABC):
         pass
 
     @abc.abstractmethod
-    def handle_task(self) -> FinalTaskDesignResult:
+    def handle_task(self, result_chan: asyncio.Queue = None) -> FinalTaskDesignResult:
         # used for try as much as possible until success or reach max attempts
         raise NotImplementedError
 
+    # @abc.abstractmethod
+    # async def handle_task_interactively(self, result_chan: asyncio.Queue) -> FinalTaskDesignResult:
+    #     # used for try as much as possible until success or reach max attempts
+    #     raise NotImplementedError
+
     @abc.abstractmethod
-    def handle_one_iter_design(self):
+    def handle_one_iter_design(self) -> (bool, TaskDesignResult):
         # used for chat-style interactions
         raise NotImplementedError
 

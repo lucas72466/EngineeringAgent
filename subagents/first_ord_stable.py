@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from DesignMemory import design_memory
@@ -31,10 +32,18 @@ class first_ord_stable_Design(AbstractSubAgent):
         self.conversation_log = []
         self.is_success = False
 
-    def handle_task(self):
+    async def handle_task(self, result_chan: asyncio.Queue = None) -> FinalTaskDesignResult:
         while self.num_attempt < self.max_attempts:
-            success = self.handle_one_iter_design()
+            print("attempt {}".format(self.num_attempt))
+            success, cur_result = self.handle_one_iter_design()
+            if result_chan is not None:
+                await result_chan.put(cur_result)
+                await result_chan.join()
+                print("put result to queue", cur_result)
             if success:
+                if result_chan is not None:
+                    await result_chan.put(TaskDesignResult(success=True, parameters={}, performance={},
+                                                           conversation_round=-1))
                 break
         return self.construct_final_result()
 
@@ -88,7 +97,13 @@ class first_ord_stable_Design(AbstractSubAgent):
                     "Final Design Parameters": design['parameters'],
                     "Final Design Performance": design['performance']
                 })
-                return True
+                cur_iter_result = TaskDesignResult(
+                    success=True,
+                    parameters=design['parameters'],
+                    performance=design['performance'],
+                    conversation_round=self.num_attempt + 1
+                )
+                return True, cur_iter_result
             else:
                 # abaltion 1: with or without feedback
                 feedback = feedback_prompt(self.design_memory, self.thresholds)
@@ -108,19 +123,26 @@ class first_ord_stable_Design(AbstractSubAgent):
             feedback = feedback_prompt(self.design_memory, self.thresholds)
             self.problem_statement = self.prompt + self.new_problem + "\n\n" + feedback + response_format_PI
         self.num_attempt += 1
-        return False
+        design = self.design_memory.get_latest_design()
+        cur_iter_result = TaskDesignResult(
+            success=False,
+            parameters=design['parameters'],
+            performance=design['performance'],
+            conversation_round=self.num_attempt + 1
+        )
+        return False, cur_iter_result
 
     def construct_final_result(self):
         history_result = []
         for idx, design in enumerate(self.design_memory.get_all_designs()):
             history_result.append(
                 TaskDesignResult(
+                    success=False if idx != len(self.design_memory.get_all_designs()) else self.is_success,
                     parameters=design['parameters'],
                     performance=design['performance'],
-                    conversation_round=idx+1
+                    conversation_round=idx + 1
                 )
             )
-        print(history_result)
         res = FinalTaskDesignResult(
             used_agent=self.agent_name,
             is_success=self.is_success,

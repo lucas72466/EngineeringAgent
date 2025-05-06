@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import control as ctrl
@@ -65,12 +66,12 @@ class CentralAgentLLM:
         else:
             return INVALID_AGENT_NUMBER, "", ""
 
-    def complete_task(self, task_specs: TaskSpecs):
+    async def complete_task(self, task_specs: TaskSpecs, _async: bool = False, result_queue: asyncio.Queue = None):
         agent_number, agent_name, task_requirement = self.choose_subagent(task_specs)
         if agent_number in subagents_classes:
             agent = subagents_classes[agent_number](task_specs, task_specs.construct_thresholds(),
                                                     task_requirement, task_specs.scenario)
-            result = agent.handle_task()
+            result = await agent.handle_task(result_queue)
             return result
         else:
             raise AgentNotFoundError()

@@ -39,6 +39,7 @@ class TaskSpecs(BaseModel):
 
 
 class TaskDesignResult(BaseModel):
+    success: bool = Field(..., description='result of current round')
     parameters: dict = Field(..., description="output parameters")
     performance: dict = Field(..., description="output performance")
     conversation_round: int = Field(..., description="conversation round")
